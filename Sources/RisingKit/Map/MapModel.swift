@@ -11,9 +11,8 @@ final class MapModel: ObservableObject {
     @Published private(set) var hasPermission = true
     @Published var message = ""
 
-    /// 끌어 놓을 때 절반·1/4 같은 자리에 붙일지, 놓은 그대로 둘지
-    enum Mode { case snap, free }
-    @Published var mode = Mode.snap
+    /// 가장자리에 놓으면 절반·1/4 로 붙일지. 끄면 어디에 놓든 놓은 자리 그대로.
+    @Published var snapsToEdges = true
     /// 배치도 위에 직접 그린 영역 (전역 좌표)과 그 디스플레이
     @Published var drawn: (display: Int, rect: CGRect)?
 
@@ -72,13 +71,17 @@ final class MapModel: ObservableObject {
             window.frame, from: screens[window.display].visible, to: screens[index].visible))
     }
 
-    /// 끌어다 놓을 지점(전역 좌표)에 해당하는 배치 위치. 화면 밖이면 nil.
-    func dropTarget(for window: WindowManager.WindowSnapshot, at point: CGPoint) -> CGRect? {
-        guard let screen = screens.first(where: { $0.full.contains(point) }) else { return nil }
-        let placement = DropZone.placement(
-            atUnitX: Double((point.x - screen.full.minX) / screen.full.width),
-            y: Double((point.y - screen.full.minY) / screen.full.height))
-        return placement.rect(in: screen.visible, current: window.frame)
+    /// 창을 끌어다 놓았을 때 갈 자리.
+    /// 놓은 지점이 디스플레이 가장자리에 가까우면 절반·1/4·최대화·1/3 로 붙이고,
+    /// 그 밖에는 놓은 자리 그대로 둔다. `point` 는 놓은 지점, `translation` 은 끈 거리 (둘 다 전역 좌표).
+    func dropTarget(for window: WindowManager.WindowSnapshot, at point: CGPoint, translation: CGSize) -> CGRect? {
+        if snapsToEdges, let screen = screens.first(where: { $0.full.contains(point) }),
+           let placement = DropZone.edgePlacement(
+               atUnitX: Double((point.x - screen.full.minX) / screen.full.width),
+               y: Double((point.y - screen.full.minY) / screen.full.height)) {
+            return placement.rect(in: screen.visible, current: window.frame)
+        }
+        return freeTarget(for: window, translation: translation)
     }
 
     // MARK: - 자유 배치

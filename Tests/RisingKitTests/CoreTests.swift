@@ -829,3 +829,28 @@ final class FreePlacementTests: XCTestCase {
                        CGSize(width: 200, height: 120))
     }
 }
+
+final class EdgePlacementTests: XCTestCase {
+    func testMiddleIsFree() {
+        // 가운데 쪽 어디에 놓든 붙지 않는다 (놓은 자리 그대로)
+        for (x, y) in [(0.5, 0.5), (0.2, 0.3), (0.8, 0.7), (0.1, 0.5), (0.5, 0.1), (0.9, 0.9)] {
+            XCTAssertNil(DropZone.edgePlacement(atUnitX: x, y: y), "\(x),\(y)")
+        }
+    }
+
+    func testEdgesSnap() {
+        XCTAssertEqual(DropZone.edgePlacement(atUnitX: 0.02, y: 0.5), .leftHalf)
+        XCTAssertEqual(DropZone.edgePlacement(atUnitX: 0.98, y: 0.5), .rightHalf)
+        XCTAssertEqual(DropZone.edgePlacement(atUnitX: 0.5, y: 0.02), .maximize)
+        XCTAssertEqual(DropZone.edgePlacement(atUnitX: 0.2, y: 0.98), .leftThird)
+        XCTAssertEqual(DropZone.edgePlacement(atUnitX: 0.5, y: 0.98), .centerThird)
+        XCTAssertEqual(DropZone.edgePlacement(atUnitX: 0.9, y: 0.98), .rightThird)
+    }
+
+    func testCornersSnapToQuarters() {
+        XCTAssertEqual(DropZone.edgePlacement(atUnitX: 0.02, y: 0.1), .topLeft)
+        XCTAssertEqual(DropZone.edgePlacement(atUnitX: 0.02, y: 0.9), .bottomLeft)
+        XCTAssertEqual(DropZone.edgePlacement(atUnitX: 0.98, y: 0.1), .topRight)
+        XCTAssertEqual(DropZone.edgePlacement(atUnitX: 0.98, y: 0.9), .bottomRight)
+    }
+}

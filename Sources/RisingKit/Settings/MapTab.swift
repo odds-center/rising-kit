@@ -78,24 +78,13 @@ struct MapTab: View {
         }
     }
 
-    /// 끌어 놓을 때 정해진 자리에 붙일지, 놓은 그대로 둘지.
+    /// 가장자리에 놓으면 붙일지 고르는 스위치.
     private var modePicker: some View {
-        HStack(spacing: 2) {
-            ForEach([(MapModel.Mode.snap, "붙이기"), (MapModel.Mode.free, "자유")], id: \.1) { mode, label in
-                let active = model.mode == mode
-                Text(label)
-                    .font(.system(size: 11.5, weight: active ? .semibold : .regular))
-                    .foregroundStyle(active ? Color.primary : Color.secondary)
-                    .padding(.horizontal, 10)
-                    .frame(height: 22)
-                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.primary.opacity(active ? 0.14 : 0)))
-                    .contentShape(Rectangle())
-                    .onTapGesture { model.mode = mode }
-            }
+        HStack(spacing: 6) {
+            Text("가장자리에 붙이기").font(.system(size: 11.5)).foregroundStyle(.secondary)
+            Toggle("", isOn: $model.snapsToEdges).toggleStyle(.switch).labelsHidden().controlSize(.mini)
         }
-        .padding(2)
-        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.primary.opacity(0.05)))
-        .help("붙이기: 놓는 자리에 따라 절반·1/4·최대화 / 자유: 놓은 그대로, 빈 곳을 끌면 영역 그리기")
+        .help("켜면 모니터 가장자리에 놓을 때 절반·1/4·최대화로 맞춥니다. 가운데 쪽에 놓으면 언제나 놓은 자리 그대로입니다")
     }
 
     private var keyHints: some View {
@@ -106,7 +95,7 @@ struct MapTab: View {
             hint("최대화", ["↩"])
             hint("모니터로", ["1–9"])
             hint("다음 창", ["⇥"])
-            Text(model.mode == .free ? "· 창 모서리를 끌면 크기, 빈 곳을 끌면 영역" : "· 창 오른쪽 아래 모서리를 끌면 크기")
+            Text("· 파란 점을 끌면 크기, 빈 곳을 끌면 영역")
                 .font(.system(size: 11)).foregroundStyle(.tertiary).lineLimit(1)
             Spacer(minLength: 0)
         }
@@ -229,11 +218,10 @@ struct MapCanvas: View {
                     .offset(x: r.minX, y: r.minY)
             }
             .contentShape(Rectangle())
-            // 자유 모드에서 빈 곳을 끌면 영역을 그린다
+            // 빈 곳을 끌면 영역을 그린다
             .gesture(
                 DragGesture(minimumDistance: 4, coordinateSpace: .named("map"))
                     .onChanged { value in
-                        guard model.mode == .free else { return }
                         model.draw(from: unmap(value.startLocation), to: unmap(value.location))
                     }
                     .onEnded { _ in model.finishDrawing() })
@@ -314,15 +302,10 @@ struct MapCanvas: View {
         .coordinateSpace(name: "map")
     }
 
-    /// 끌어 놓은 자리: 붙이기 모드면 절반·1/4 등으로, 자유 모드면 놓은 그대로.
+    /// 끌어 놓은 자리: 가장자리 근처면 붙이고, 아니면 놓은 그대로.
     private func target(for window: WindowManager.WindowSnapshot, _ value: DragGesture.Value) -> CGRect? {
-        switch model.mode {
-        case .snap:
-            return model.dropTarget(for: window, at: unmap(value.location))
-        case .free:
-            return model.freeTarget(for: window, translation: CGSize(
-                width: value.translation.width / scale, height: value.translation.height / scale))
-        }
+        model.dropTarget(for: window, at: unmap(value.location), translation: CGSize(
+            width: value.translation.width / scale, height: value.translation.height / scale))
     }
 
     private func windowView(_ window: WindowManager.WindowSnapshot) -> some View {

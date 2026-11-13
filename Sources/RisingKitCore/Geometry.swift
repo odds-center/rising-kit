@@ -55,6 +55,23 @@ public enum DropZone {
     }
 }
 
+extension DropZone {
+    /// 배치도에서 창을 놓은 지점(화면 안 0~1 좌표)이 가장자리에 가까울 때만 붙일 배치를 돌려준다.
+    /// 가운데 쪽에 놓으면 nil — 그때는 놓은 자리 그대로 둔다.
+    /// 왼쪽·오른쪽 끝 = 절반(위아래 끝에서는 1/4), 위쪽 끝 = 최대화, 아래쪽 끝 = 1/3.
+    public static func edgePlacement(atUnitX x: Double, y: Double, margin: Double = 0.07) -> Placement? {
+        let left = x < margin, right = x > 1 - margin
+        let top = y < margin, bottom = y > 1 - margin
+        // 모서리는 가장자리보다 넉넉하게 잡는다
+        let nearTop = y < 0.22, nearBottom = y > 0.78
+        if left { return nearTop ? .topLeft : nearBottom ? .bottomLeft : .leftHalf }
+        if right { return nearTop ? .topRight : nearBottom ? .bottomRight : .rightHalf }
+        if top { return .maximize }
+        if bottom { return x < 1.0 / 3 ? .leftThird : x > 2.0 / 3 ? .rightThird : .centerThird }
+        return nil
+    }
+}
+
 public enum EdgeSnap {
     /// 창을 끌던 마우스가 화면 가장자리에 닿았을 때의 배치. 가장자리가 아니면 nil.
     /// `point` 와 `screen` 은 왼쪽 위가 원점인 전역 좌표.
