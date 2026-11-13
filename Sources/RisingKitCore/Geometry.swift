@@ -76,11 +76,16 @@ public enum EdgeSnap {
     /// 창을 끌던 마우스가 화면 가장자리에 닿았을 때의 배치. 가장자리가 아니면 nil.
     /// `point` 와 `screen` 은 왼쪽 위가 원점인 전역 좌표.
     /// 왼쪽·오른쪽 = 절반(위아래 끝에서는 1/4), 위 = 최대화(좌우 끝에서는 1/4), 아래 = 1/3.
-    public static func placement(at point: CGPoint, in screen: CGRect, edge: CGFloat = 6) -> Placement? {
-        let atLeft = point.x <= screen.minX + edge
-        let atRight = point.x >= screen.maxX - edge
-        let atTop = point.y <= screen.minY + edge
-        let atBottom = point.y >= screen.maxY - edge
+    /// `others` 는 다른 화면들. 다른 화면과 맞닿은 가장자리는 창을 넘겨 보내는 길이라 붙이지 않는다.
+    public static func placement(at point: CGPoint, in screen: CGRect, others: [CGRect] = [], edge: CGFloat = 6) -> Placement? {
+        func open(_ dx: CGFloat, _ dy: CGFloat) -> Bool {
+            let beyond = CGPoint(x: point.x + dx * (edge + 2), y: point.y + dy * (edge + 2))
+            return !others.contains { $0.contains(beyond) }
+        }
+        let atLeft = point.x <= screen.minX + edge && open(-1, 0)
+        let atRight = point.x >= screen.maxX - edge && open(1, 0)
+        let atTop = point.y <= screen.minY + edge && open(0, -1)
+        let atBottom = point.y >= screen.maxY - edge && open(0, 1)
         let nearTop = point.y < screen.minY + screen.height * 0.2
         let nearBottom = point.y > screen.maxY - screen.height * 0.2
         let nearLeft = point.x < screen.minX + screen.width * 0.2

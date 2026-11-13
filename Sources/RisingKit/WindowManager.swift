@@ -51,6 +51,13 @@ enum WindowManager {
         guard ensurePermission(), let window = focusedWindow(), let current = frame(of: window),
               let screen = screen(containing: current) else { NSSound.beep(); return }
         remember(window, frame: current)
+        // 이미 그 절반에 있으면 그쪽 옆 화면의 반대쪽 절반으로 넘긴다 (Magnet 과 같게)
+        let all = screens()
+        if let hop = DisplayHop.next(placement, window: current, from: screen.index,
+                                     screens: all.map(\.full), visible: all.map(\.visible)) {
+            setFrame(hop.placement.rect(in: all[hop.screen].visible, current: current), of: window)
+            return
+        }
         setFrame(placement.rect(in: screen.visible, current: current), of: window)
     }
 
@@ -68,8 +75,9 @@ enum WindowManager {
         guard ensurePermission(), let window = focusedWindow(), let current = frame(of: window),
               all.count > 1, let from = screen(containing: current) else { NSSound.beep(); return }
         let to = all[((from.index + offset) % all.count + all.count) % all.count]
+        let target = DisplayMove.remap(current, from: from.visible, to: to.visible)
         remember(window, frame: current)
-        setFrame(DisplayMove.remap(current, from: from.visible, to: to.visible), of: window)
+        setFrame(target, of: window)
     }
 
     static func restore() {
@@ -262,7 +270,7 @@ enum WindowManager {
         if let titleContains, !titleContains.isEmpty {
             window = all.first { string($0, kAXTitleAttribute)?.localizedCaseInsensitiveContains(titleContains) == true }
         } else {
-            window = element(axApp, kAXFocusedWindowAttribute) ?? element(axApp, kAXMainWindowAttribute) ?? all.first
+            window = frontWindow(of: axApp) ?? all.first
         }
         guard let window, let current = self.frame(of: window) else {
             return .failure(ControlError(message: "No matching window in \(app.localizedName ?? "app")."))
@@ -344,7 +352,17 @@ enum WindowManager {
 
     static func focusedWindow() -> AXUIElement? {
         guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
-        return element(axApplication(app), kAXFocusedWindowAttribute)
+        return frontWindow(of: axApplication(app))
+    }
+
+    /// 앱의 맨 앞 일반 창. Finder 는 창을 눌러 놓아도 "포커스된 창"으로 바탕화면(모든 모니터를 덮는
+    /// 보이지 않는 창)을 돌려줄 때가 있어, 일반 창이 아니면 주 창 · 첫 일반 창으로 넘어간다.
+    private static func frontWindow(of axApp: AXUIElement) -> AXUIElement? {
+        for attribute in [kAXFocusedWindowAttribute, kAXMainWindowAttribute] {
+            if let window = element(axApp, attribute), isStandard(window) { return window }
+        }
+        return windows(of: axApp).first { isStandard($0) && !isMinimized($0) }
+            ?? element(axApp, kAXFocusedWindowAttribute)
     }
 
     static func frame(of window: AXUIElement) -> CGRect? {
@@ -398,3 +416,4 @@ enum WindowManager {
         }
     }
 }
+

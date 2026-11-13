@@ -51,6 +51,29 @@ final class PlacementTests: XCTestCase {
         let moved = DisplayMove.remap(CGRect(x: 500, y: 0, width: 500, height: 800), from: from, to: to)
         XCTAssertEqual(moved, CGRect(x: 2000, y: -200, width: 1000, height: 1600))
     }
+
+    // 가로 모니터 → 세로 모니터
+    let landscape = CGRect(x: 0, y: 30, width: 2560, height: 1410)
+    let portrait = CGRect(x: 2560, y: -1890, width: 2160, height: 3810)
+
+    func testFreeWindowKeepsItsSize() {
+        let moved = DisplayMove.remap(CGRect(x: 845, y: 218, width: 870, height: 658), from: landscape, to: portrait)
+        XCTAssertEqual(moved.size, CGSize(width: 870, height: 658))
+        XCTAssertTrue(portrait.contains(moved))
+    }
+
+    func testTooBigWindowShrinksToFit() {
+        let moved = DisplayMove.remap(CGRect(x: 100, y: 100, width: 2400, height: 1200), from: landscape, to: portrait)
+        XCTAssertEqual(moved.width, 2160)
+        XCTAssertEqual(moved.height, 1200)
+        XCTAssertTrue(portrait.contains(moved))
+    }
+
+    func testSnappedWindowKeepsItsPlacement() {
+        let left = Placement.leftHalf.rect(in: landscape, current: .zero)
+        XCTAssertEqual(DisplayMove.remap(left, from: landscape, to: portrait), Placement.leftHalf.rect(in: portrait, current: .zero))
+        XCTAssertEqual(DisplayMove.remap(landscape, from: landscape, to: portrait), portrait)
+    }
 }
 
 final class CalculatorTests: XCTestCase {
@@ -303,6 +326,21 @@ final class EdgeSnapTests: XCTestCase {
         XCTAssertEqual(at(2558, 1400), .bottomRight)
         XCTAssertEqual(at(200, 1), .topLeft)
         XCTAssertEqual(at(2400, 1), .topRight)
+    }
+
+    func testEdgesTouchingAnotherDisplayDoNotSnap() {
+        // 주 화면 위에 화면 하나, 오른쪽에 세로 화면 하나
+        let main = CGRect(x: 0, y: 0, width: 2560, height: 1440)
+        let above = CGRect(x: 0, y: -1440, width: 2560, height: 1440)
+        let right = CGRect(x: 2560, y: -1920, width: 2160, height: 3840)
+        let others = [above, right]
+        func at(_ x: CGFloat, _ y: CGFloat) -> Placement? { EdgeSnap.placement(at: CGPoint(x: x, y: y), in: main, others: others) }
+        XCTAssertNil(at(1280, 1))        // 위 = 다른 화면으로 넘어가는 길
+        XCTAssertNil(at(2558, 700))      // 오른쪽 = 세로 화면으로 넘어가는 길
+        XCTAssertNil(at(2558, 1))
+        XCTAssertEqual(at(2, 700), .leftHalf)      // 왼쪽 · 아래는 그대로 붙는다
+        XCTAssertEqual(at(1280, 1439), .centerThird)
+        XCTAssertEqual(at(2, 1), .topLeft)         // 왼쪽 위 모서리는 왼쪽 가장자리로 붙는다
     }
 
     func testAwayFromEdgesIsNil() {
@@ -852,5 +890,51 @@ final class EdgePlacementTests: XCTestCase {
         XCTAssertEqual(DropZone.edgePlacement(atUnitX: 0.02, y: 0.9), .bottomLeft)
         XCTAssertEqual(DropZone.edgePlacement(atUnitX: 0.98, y: 0.1), .topRight)
         XCTAssertEqual(DropZone.edgePlacement(atUnitX: 0.98, y: 0.9), .bottomRight)
+    }
+}
+
+final class DisplayHopTests: XCTestCase {
+    // 지금 책상: 0 = Type-c (주 화면 위), 1 = Q27 (주 화면), 2 = V28UE (오른쪽 세로)
+    let screens = [CGRect(x: 0, y: -1440, width: 2560, height: 1440),
+                   CGRect(x: 0, y: 0, width: 2560, height: 1440),
+                   CGRect(x: 2560, y: -1920, width: 2160, height: 3840)]
+    let visible = [CGRect(x: 0, y: -1410, width: 2560, height: 1410),
+                   CGRect(x: 0, y: 30, width: 2560, height: 1410),
+                   CGRect(x: 2560, y: -1890, width: 2160, height: 3810)]
+
+    func hop(_ p: Placement, _ window: CGRect, _ from: Int) -> DisplayHop.Hop? {
+        DisplayHop.next(p, window: window, from: from, screens: screens, visible: visible)
+    }
+
+    func testRightHalfAgainGoesToTheRightDisplay() {
+        let right = Placement.rightHalf.rect(in: visible[1], current: .zero)
+        XCTAssertEqual(hop(.rightHalf, right, 1), .init(screen: 2, placement: .leftHalf))
+    }
+
+    func testNotYetInPlaceJustSnaps() {
+        XCTAssertNil(hop(.rightHalf, CGRect(x: 100, y: 100, width: 800, height: 600), 1))
+    }
+
+    func testNoDisplayThatWayStays() {
+        let left = Placement.leftHalf.rect(in: visible[1], current: .zero)
+        XCTAssertNil(hop(.leftHalf, left, 1))
+        let right = Placement.rightHalf.rect(in: visible[2], current: .zero)
+        XCTAssertNil(hop(.rightHalf, right, 2))
+    }
+
+    func testLeftFromPortraitPicksTheDisplayTheWindowLinesUpWith() {
+        let leftLow = CGRect(x: 2560, y: 30, width: 1080, height: 1000)     // 아래쪽 = Q27 높이
+        let leftHigh = CGRect(x: 2560, y: -1400, width: 1080, height: 1000) // 위쪽 = Type-c 높이
+        XCTAssertEqual(DisplayHop.neighbor(of: 2, dx: -1, dy: 0, window: leftLow, screens: screens), 1)
+        XCTAssertEqual(DisplayHop.neighbor(of: 2, dx: -1, dy: 0, window: leftHigh, screens: screens), 0)
+        let left = Placement.leftHalf.rect(in: visible[2], current: .zero)
+        XCTAssertNotNil(hop(.leftHalf, left, 2))
+    }
+
+    func testUpAndDownBetweenStackedDisplays() {
+        let top = Placement.topHalf.rect(in: visible[1], current: .zero)
+        XCTAssertEqual(hop(.topHalf, top, 1), .init(screen: 0, placement: .bottomHalf))
+        let bottom = Placement.bottomHalf.rect(in: visible[0], current: .zero)
+        XCTAssertEqual(hop(.bottomHalf, bottom, 0), .init(screen: 1, placement: .topHalf))
     }
 }

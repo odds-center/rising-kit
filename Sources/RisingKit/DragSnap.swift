@@ -68,8 +68,11 @@ final class DragSnap {
         }
 
         let point = Self.mouseLocation()
-        guard let screen = WindowManager.screens().first(where: { $0.full.insetBy(dx: -1, dy: -1).contains(point) }),
-              let placement = EdgeSnap.placement(at: point, in: screen.full) else {
+        let screens = WindowManager.screens()
+        guard let screen = screens.first(where: { $0.full.insetBy(dx: -1, dy: -1).contains(point) }),
+              let placement = EdgeSnap.placement(
+                  at: point, in: screen.full,
+                  others: screens.filter { $0.index != screen.index }.map(\.full)) else {
             target = nil
             hideOverlay()
             return
