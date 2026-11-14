@@ -931,6 +931,13 @@ final class DisplayHopTests: XCTestCase {
         XCTAssertNotNil(hop(.leftHalf, left, 2))
     }
 
+    func testRightFromTheTopDisplayGoesStraightRight() {
+        // 위 모니터(Type-c)에서 오른쪽은 아래 모니터가 아니라 오른쪽 세로 모니터
+        let window = CGRect(x: 300, y: -1200, width: 800, height: 500)
+        XCTAssertEqual(DisplayHop.neighbor(of: 0, dx: 1, dy: 0, window: window, screens: screens), 2)
+        XCTAssertNil(DisplayHop.neighbor(of: 0, dx: -1, dy: 0, window: window, screens: screens))
+    }
+
     func testUpAndDownBetweenStackedDisplays() {
         let top = Placement.topHalf.rect(in: visible[1], current: .zero)
         XCTAssertEqual(hop(.topHalf, top, 1), .init(screen: 0, placement: .bottomHalf))

@@ -115,7 +115,7 @@ public enum DisplayHop {
     }
 
     /// `from` 화면의 그쪽 가장자리에 맞닿은 화면. 여럿이면 창과 가장 많이 겹치는(가까운) 화면.
-    static func neighbor(of from: Int, dx: Int, dy: Int, window: CGRect, screens: [CGRect]) -> Int? {
+    public static func neighbor(of from: Int, dx: Int, dy: Int, window: CGRect, screens: [CGRect]) -> Int? {
         let a = screens[from]
         func overlap(_ lo1: CGFloat, _ hi1: CGFloat, _ lo2: CGFloat, _ hi2: CGFloat) -> CGFloat { min(hi1, hi2) - max(lo1, lo2) }
         var best: (index: Int, score: CGFloat)?

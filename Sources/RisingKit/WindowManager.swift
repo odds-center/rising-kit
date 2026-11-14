@@ -69,12 +69,16 @@ enum WindowManager {
         setFrame(zone.rect.absolute(in: screen.visible), of: window)
     }
 
-    /// offset +1 은 오른쪽(다음) 디스플레이, -1 은 왼쪽(이전) 디스플레이.
+    /// offset +1 은 오른쪽 디스플레이, -1 은 왼쪽 디스플레이.
+    /// 그쪽에 맞닿은 화면이 있으면 그 화면으로 (위아래로 쌓인 화면을 거치지 않게),
+    /// 없으면 왼쪽부터 매긴 순서로 돌아서 어느 화면이든 갈 수 있게 한다.
     static func moveToDisplay(offset: Int) {
         let all = screens()
         guard ensurePermission(), let window = focusedWindow(), let current = frame(of: window),
               all.count > 1, let from = screen(containing: current) else { NSSound.beep(); return }
-        let to = all[((from.index + offset) % all.count + all.count) % all.count]
+        let side = DisplayHop.neighbor(of: from.index, dx: offset > 0 ? 1 : -1, dy: 0,
+                                       window: current, screens: all.map(\.full))
+        let to = all[side ?? ((from.index + offset) % all.count + all.count) % all.count]
         let target = DisplayMove.remap(current, from: from.visible, to: to.visible)
         remember(window, frame: current)
         setFrame(target, of: window)
