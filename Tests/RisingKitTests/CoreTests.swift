@@ -945,3 +945,16 @@ final class DisplayHopTests: XCTestCase {
         XCTAssertEqual(hop(.bottomHalf, bottom, 0), .init(screen: 1, placement: .topHalf))
     }
 }
+
+final class AppVersionTests: XCTestCase {
+    func testCompare() {
+        XCTAssertTrue(AppVersion.isNewer("0.13.0", than: "0.12.0"))
+        XCTAssertTrue(AppVersion.isNewer("v0.12.1", than: "0.12.0"))
+        XCTAssertTrue(AppVersion.isNewer("0.12.10", than: "0.12.9"))
+        XCTAssertTrue(AppVersion.isNewer("1.0", than: "0.99.99"))
+        XCTAssertFalse(AppVersion.isNewer("0.12.0", than: "0.12.0"))
+        XCTAssertFalse(AppVersion.isNewer("0.12", than: "0.12.0"))
+        XCTAssertFalse(AppVersion.isNewer("0.11.9", than: "0.12.0"))
+        XCTAssertFalse(AppVersion.isNewer("0.12.0-beta", than: "0.12.0"))
+    }
+}

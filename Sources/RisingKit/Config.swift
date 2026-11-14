@@ -63,6 +63,8 @@ struct Config: Codable {
     var tidyScreenshotDays = 7
     var tidyDownloadDays = 30
     var tidyAuto = false
+    /// 새 버전이 나오면 알아서 받아 설치하고 다시 시작할지 (끄면 알리기만)
+    var autoUpdate = true
 
     init() {}
 
@@ -86,6 +88,7 @@ struct Config: Codable {
         tidyScreenshotDays = try c.decodeIfPresent(Int.self, forKey: .tidyScreenshotDays) ?? 7
         tidyDownloadDays = try c.decodeIfPresent(Int.self, forKey: .tidyDownloadDays) ?? 30
         tidyAuto = try c.decodeIfPresent(Bool.self, forKey: .tidyAuto) ?? false
+        autoUpdate = try c.decodeIfPresent(Bool.self, forKey: .autoUpdate) ?? true
     }
 }
 

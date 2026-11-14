@@ -320,9 +320,43 @@ struct GeneralTab: View {
     @State private var city = ""
     @State private var cityError = ""
 
+    private var updateTitle: String {
+        let updater = Updater.shared
+        if let next = updater.available { return updater.busy ? "\(next.version) 받는 중…" : "새 버전 \(next.version)" }
+        return "자동 업데이트 · 지금 \(updater.current)"
+    }
+
+    private var updateDetail: String {
+        let updater = Updater.shared
+        if let error = updater.lastError { return error }
+        var text = "켜 두면 새 버전이 나올 때 알아서 받아 설치하고 다시 시작합니다"
+        if let checked = updater.lastChecked {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "M월 d일 HH:mm"
+            text += " · 마지막 확인 \(formatter.string(from: checked))"
+        }
+        return text
+    }
+
     var body: some View {
         let weather = WeatherService.shared
         VStack(alignment: .leading, spacing: 14) {
+            SectionTitle("업데이트")
+            Card {
+                SettingRow(symbol: "arrow.triangle.2.circlepath", title: updateTitle, detail: updateDetail) {
+                    Button(Updater.shared.available == nil ? "지금 확인" : "지금 설치") {
+                        if Updater.shared.available == nil { Updater.shared.check(userInitiated: true) }
+                        else { Updater.shared.install() }
+                    }
+                    .disabled(Updater.shared.busy)
+                    Toggle("", isOn: Binding(
+                        get: { ConfigStore.shared.config.autoUpdate },
+                        set: { value in ConfigStore.shared.update { $0.autoUpdate = value } }))
+                        .toggleStyle(.switch).labelsHidden()
+                }
+                .controlSize(.small)
+            }
+
             SectionTitle("클립보드 기록")
             Card {
                 VStack(spacing: 6) {

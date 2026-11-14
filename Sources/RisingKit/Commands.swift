@@ -102,6 +102,9 @@ enum Commands {
         Command(id: "balance.center", title: "좌우 음량 지금 가운데로", symbol: "speaker.wave.2",
                 keywords: ["balance", "sound", "audio", "소리", "밸런스", "균형"], defaultShortcut: nil
         ) { BalanceLock.shared.centerIfNeeded() },
+        Command(id: "app.update", title: "Rising Kit 업데이트 확인", symbol: "arrow.triangle.2.circlepath",
+                keywords: ["update", "upgrade", "업데이트", "새 버전", "버전"], defaultShortcut: nil
+        ) { Updater.shared.check(userInitiated: true) },
         Command(id: "balance.toggle", title: "좌우 음량 고정 켜기/끄기", symbol: "lock",
                 keywords: ["balance lock", "sound", "소리", "밸런스", "균형"], defaultShortcut: nil
         ) { BalanceLock.shared.enabled.toggle() },

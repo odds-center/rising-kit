@@ -49,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         DragSnap.shared.start()
         BalanceLock.shared.startIfEnabled()
         Control.startServer()
+        Updater.shared.start()
     }
 
     /// 설정이 바뀔 때마다 전역 단축키를 처음부터 다시 등록한다.
@@ -156,6 +157,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(settingsItem)
 
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
+        if let next = Updater.shared.available {
+            menu.addItem(item(Updater.shared.busy ? "\(next.version) 받는 중…" : "\(next.version) 으로 업데이트",
+                              #selector(installUpdate), "arrow.down.circle"))
+        } else {
+            menu.addItem(item("업데이트 확인", #selector(checkUpdate), "arrow.triangle.2.circlepath"))
+        }
         menu.addItem(disabled("Rising Kit \(version)", "info.circle"))
         let quit = NSMenuItem(title: "Rising Kit 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         quit.image = symbol("xmark.rectangle")
@@ -294,6 +301,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: - 동작
 
     @objc private func openSettings() { mainWindow.show(.window) }
+
+    @objc private func checkUpdate() { Updater.shared.check(userInitiated: true) }
+
+    @objc private func installUpdate() { Updater.shared.install() }
 
     @objc private func runCommand(_ sender: NSMenuItem) {
         guard let id = sender.representedObject as? String else { return }
