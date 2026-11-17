@@ -59,6 +59,12 @@ enum WindowManager {
             return
         }
         setFrame(placement.rect(in: screen.visible, current: current), of: window)
+        // 놓아 봤는데 그대로면(최소 크기 때문에 절반보다 큰 창) 이미 그 자리에 있던 것이니 옆 화면으로 넘긴다
+        if let after = frame(of: window), near(after, current),
+           let hop = DisplayHop.next(placement, window: after, from: screen.index,
+                                     screens: all.map(\.full), visible: all.map(\.visible), settled: true) {
+            setFrame(hop.placement.rect(in: all[hop.screen].visible, current: after), of: window)
+        }
     }
 
     static func apply(_ zone: Zone) {

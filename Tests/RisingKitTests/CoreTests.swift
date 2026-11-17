@@ -915,6 +915,18 @@ final class DisplayHopTests: XCTestCase {
         XCTAssertNil(hop(.rightHalf, CGRect(x: 100, y: 100, width: 800, height: 600), 1))
     }
 
+    func testWindowThatCannotShrinkToHalfStillHops() {
+        // 최소 너비가 절반보다 큰 창: 오른쪽 절반 자리에 놓아도 더 넓게 남는다
+        var wide = Placement.rightHalf.rect(in: visible[1], current: .zero)
+        wide.size.width += 104
+        XCTAssertNil(hop(.rightHalf, wide, 1))
+        XCTAssertEqual(DisplayHop.next(.rightHalf, window: wide, from: 1, screens: screens, visible: visible, settled: true),
+                       .init(screen: 2, placement: .leftHalf))
+        // 자리가 다르면 settled 여도 넘기지 않는다
+        XCTAssertNil(DisplayHop.next(.rightHalf, window: wide.offsetBy(dx: -200, dy: 0), from: 1,
+                                     screens: screens, visible: visible, settled: true))
+    }
+
     func testNoDisplayThatWayStays() {
         let left = Placement.leftHalf.rect(in: visible[1], current: .zero)
         XCTAssertNil(hop(.leftHalf, left, 1))

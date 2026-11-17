@@ -94,8 +94,11 @@ public enum DisplayHop {
 
     /// `screens` 는 화면 전체 영역, `visible` 은 같은 순서의 메뉴바 · Dock 을 뺀 영역 (왼쪽 위가 원점).
     /// 넘길 일이 아니면(아직 그 자리가 아니거나 그쪽에 화면이 없으면) nil.
+    /// `settled` 는 그 자리에 놓아 봤는데도 창이 그대로였다는 뜻이다. 최소 크기가 절반보다 큰 창은
+    /// 절반 자리에 놓아도 더 크게 남아서, 크기까지 맞아야 한다고 하면 몇 번을 눌러도 넘어가지 않는다.
     public static func next(
-        _ placement: Placement, window: CGRect, from: Int, screens: [CGRect], visible: [CGRect]
+        _ placement: Placement, window: CGRect, from: Int, screens: [CGRect], visible: [CGRect],
+        settled: Bool = false
     ) -> Hop? {
         guard screens.indices.contains(from), visible.indices.contains(from) else { return nil }
         let opposite: Placement
@@ -108,8 +111,11 @@ public enum DisplayHop {
         default: return nil
         }
         let here = placement.rect(in: visible[from], current: window)
-        guard abs(here.minX - window.minX) <= 3, abs(here.minY - window.minY) <= 3,
-              abs(here.width - window.width) <= 3, abs(here.height - window.height) <= 3 else { return nil }
+        // 크기를 못 줄여 절반보다 크게 남은 창은 `settled` 로 알려 준다 (위치만 맞으면 그 자리에 있는 것으로 본다)
+        guard abs(here.minX - window.minX) <= 3, abs(here.minY - window.minY) <= 3 else { return nil }
+        if !settled {
+            guard abs(here.width - window.width) <= 3, abs(here.height - window.height) <= 3 else { return nil }
+        }
         guard let target = neighbor(of: from, dx: dx, dy: dy, window: window, screens: screens) else { return nil }
         return Hop(screen: target, placement: opposite)
     }
